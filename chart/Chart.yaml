@@ -1,0 +1,6 @@
+apiVersion: v2
+name: taskboard
+description: Chart Helm de la mini-app Taskboard — formation Ingenierie DevOps (Initiation)
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

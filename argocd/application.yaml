@@ -1,0 +1,25 @@
+---
+# Lab 4 — GitOps : ArgoCD observe le repo INFRA et converge le cluster vers son contenu.
+# Remplacer tahararib par le compte GitHub du participant.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: taskboard
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/tahararib/taskboard-infra.git
+    targetRevision: main
+    path: chart
+    helm:
+      valueFiles:
+        - values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: taskboard
+  syncPolicy:
+    automated:
+      selfHeal: true        # la demo clef : toute derive manuelle est corrigee par Git
+    syncOptions:
+      - CreateNamespace=true

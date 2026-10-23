@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    {{- include "taskboard.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "taskboard.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "taskboard.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: taskboard
+          image: "{{ .Values.image.repository }}:{{ required "image.tag est obligatoire" .Values.image.tag }}"
+          ports:
+            - name: http
+              containerPort: {{ .Values.app.port }}
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:postgresql://{{ .Values.db.host }}:{{ .Values.db.port }}/{{ .Values.db.name }}"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: {{ .Values.db.username | quote }}
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-db
+                  key: password
+          # startupProbe tient la porte pendant le demarrage ; liveness/readiness
+          # prennent le relais ensuite — on attend l'EVENEMENT, pas l'horloge.
+          startupProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            periodSeconds: 3
+            failureThreshold: 20
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

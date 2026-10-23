@@ -1,0 +1,30 @@
+---
+replicaCount: 1
+
+image:
+  # Nom vu par les NOEUDS k3d (resolution via le reseau Docker du cluster).
+  # Le push depuis le poste se fait, lui, vers localhost:5000 — meme registry, deux noms.
+  repository: registry.k3d.localhost:5000/taskboard
+  tag: latest
+
+app:
+  port: 8080
+
+db:
+  host: postgres
+  port: 5432
+  name: taskboard
+  username: taskboard
+  password: taskboard  # pragma: allowlist secret — formation uniquement
+
+ingress:
+  enabled: true
+  className: traefik
+  host: taskboard.localhost
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+  limits:
+    memory: 512Mi
