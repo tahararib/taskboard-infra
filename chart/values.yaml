@@ -5,7 +5,7 @@ image:
   # Nom vu par les NOEUDS k3d (resolution via le reseau Docker du cluster).
   # Le push depuis le poste se fait, lui, vers localhost:5000 — meme registry, deux noms.
   repository: registry.k3d.localhost:5000/taskboard
-  tag: latest
+  tag: "5025e1f"
 
 app:
   port: 8080
