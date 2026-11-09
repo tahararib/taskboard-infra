@@ -1,5 +1,5 @@
 ---
-replicaCount: 1
+replicaCount: 2
 
 image:
   # Nom vu par les NOEUDS k3d (resolution via le reseau Docker du cluster).
