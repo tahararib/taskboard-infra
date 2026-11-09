@@ -292,6 +292,57 @@ data:
               }
             }
           ]
+        },
+        {
+          "id": 7,
+          "type": "stat",
+          "title": "Taux d'erreur HTTP (5xx)",
+          "gridPos": {
+            "h": 5,
+            "w": 8,
+            "x": 0,
+            "y": 12
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "decimals": 1,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 0.05
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "colorMode": "background",
+            "graphMode": "area",
+            "justifyMode": "auto"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(rate(http_server_requests_seconds_count{job=\"taskboard\",status=~\"5..\"}[1m])) / sum(rate(http_server_requests_seconds_count{job=\"taskboard\"}[1m]))"
+            }
+          ]
         }
       ]
     }
@@ -322,6 +373,7 @@ spec:
             - {name: storage, mountPath: /var/lib/grafana}
             - {name: datasources, mountPath: /etc/grafana/provisioning/datasources}
             - {name: provider, mountPath: /etc/grafana/provisioning/dashboards}
+            - {name: alerting, mountPath: /etc/grafana/provisioning/alerting}
             - {name: dashboards, mountPath: /var/lib/grafana/dashboards}
       volumes:
         - name: storage
@@ -332,6 +384,8 @@ spec:
           configMap: {name: grafana-dashboard-provider}
         - name: dashboards
           configMap: {name: grafana-dashboard-taskboard}
+        - name: alerting
+          configMap: {name: grafana-alerting}
 ---
 apiVersion: v1
 kind: Service
@@ -358,3 +412,46 @@ spec:
             pathType: Prefix
             backend:
               service: {name: grafana, port: {number: 3000}}
+---
+# v0.5-pre — règle d'alerte provisionnée (démo E3 MG708 / atelier 6 Avancé).
+# Provisionnée en fichier : survit aux redémarrages du pod Grafana (pas de volume persistant).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-alerting
+  namespace: monitoring
+data:
+  alerting.yaml: |
+    apiVersion: 1
+    groups:
+      - orgId: 1
+        name: taskboard
+        folder: Taskboard
+        interval: 1m
+        rules:
+          - uid: taskboard-taux-erreur
+            title: taskboard · taux d'erreur HTTP
+            condition: C
+            data:
+              - refId: A
+                relativeTimeRange: {from: 300, to: 0}
+                datasourceUid: prometheus
+                model:
+                  refId: A
+                  instant: true
+                  expr: sum(rate(http_server_requests_seconds_count{job="taskboard",status=~"5.."}[1m])) / sum(rate(http_server_requests_seconds_count{job="taskboard"}[1m]))
+              - refId: C
+                datasourceUid: __expr__
+                model:
+                  refId: C
+                  type: threshold
+                  expression: A
+                  conditions:
+                    - evaluator: {params: [0.05], type: gt}
+            noDataState: OK
+            execErrState: Error
+            for: 1m
+            annotations:
+              summary: Plus de 5 % des requêtes taskboard échouent (HTTP 5xx)
+            labels:
+              service: taskboard
