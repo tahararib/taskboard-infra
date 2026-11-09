@@ -1,0 +1,23 @@
+# iac/ansible/configurer.yml — ILLUSTRATIF (démo MG708, lecture seule en séance).
+# Idempotent : le rejouer ne change RIEN si l'état cible est déjà atteint.
+# Sera câblé au pipeline par la passe Avancé (atelier 2, étape 4).
+- name: Configurer le poste de l'usine
+  hosts: usine
+  become: true
+  tasks:
+    - name: Les outils de base sont présents
+      ansible.builtin.apt:
+        name: [git, curl, jq]
+        state: present        # « présent », pas « installer » : on décrit, on n'exécute pas
+
+    - name: Le répertoire de travail existe
+      ansible.builtin.file:
+        path: /opt/formation
+        state: directory
+        mode: "0755"
+
+    - name: La limite de fichiers ouverts est fixée
+      ansible.builtin.lineinfile:
+        path: /etc/security/limits.d/formation.conf
+        line: "formation soft nofile 65536"
+        create: true
